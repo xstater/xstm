@@ -1,0 +1,27 @@
+[package]
+name = "xstm"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+retry_info = []
+small_alloc = ["dep:smallvec"]
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+
+[dependencies]
+smallvec = { version = "1.13.2", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1.41", features = ["full"] }
+divan = "0.1"
+
+[[bench]]
+name = "basic"
+harness = false
+
+[[bench]]
+name = "fib"
+harness = false
