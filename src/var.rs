@@ -73,21 +73,46 @@ impl<T: Copy> TVar<T> {
         let local_version = self.local_version.load(Ordering::SeqCst);
 
         let tid = std::thread::current().id();
-        println!("{tid:?}, local={local_version:?} ref={ref_version:?}");
+        println!("{tid:?}: Var Checking with local={local_version:?} ref={ref_version:?}");
 
         local_version > 0 && local_version <= ref_version.as_isize()
     }
 
     /// Read with version checking
-    pub(crate) fn read_with_check(&self, read_version: Version) -> Option<T> {
-        // Read the data first
-        let data = self.value.get();
-        // post-validation:
-        if self.check(read_version) {
-            Some(data)
-        } else {
-            None
+    // pub(crate) fn read_with_check(&self, read_version: Version) -> Option<T> {
+    //     // Read the data first
+    //     let data = self.value.get();
+    //     // post-validation:
+    //     if self.check(read_version) {
+    //         Some(data)
+    //     } else {
+    //         None
+    //     }
+    // }
+
+    pub(crate) fn read_with_double_check(&self, read_version: Version) -> Option<T> {
+        // Pre-Validation
+        let pre_version = self.local_version.load(Ordering::SeqCst);
+        
+        if pre_version < 0 {
+            return None
         }
+
+        if pre_version > read_version.as_isize() {
+            return None
+        }
+
+        // read the data
+        let data = self.value.get();
+
+        // Post-Validation
+        let post_version = self.local_version.load(Ordering::SeqCst);
+        
+        if post_version != pre_version {
+            return None
+        }
+
+        Some(data)
     }
 
     /// Try get the write lock
@@ -142,5 +167,9 @@ impl<'var, T> Drop for Guard<'var, T> {
         self.var
             .local_version
             .store(self.new_local_version.as_isize(), Ordering::SeqCst);
+
+        let tid = std::thread::current().id();
+        let version = self.new_local_version;
+        println!("{tid:?}: Var Lock realeased with new_version={version:?}");
     }
 }

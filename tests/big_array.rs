@@ -48,7 +48,7 @@ async fn basic() {
 
     let array = Arc::new(TVar::new(array));
 
-    let count = 100;
+    let count = 100_00;
 
     let mut handles = Vec::new();
     for _ in 0..count {

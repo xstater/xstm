@@ -19,6 +19,6 @@ impl VersionClock {
 
     pub fn tick(&self) -> Version {
         let old = self.version.fetch_add(1, Ordering::SeqCst);
-        Version::new(old + 1).unwrap()
+        Version::new(old.wrapping_add(1)).unwrap()
     }
 }

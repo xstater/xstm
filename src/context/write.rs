@@ -62,7 +62,8 @@ impl<'var> Context<'var> {
                 })
         } else {
             // Read data from var
-            var.read_with_check(self.read_version)
+            // var.read_with_check(self.read_version)
+            var.read_with_double_check(self.read_version)
                 .ok_or_else(|| match () {
                     #[cfg(not(feature = "retry_info"))]
                     () => StmError::Retry,
