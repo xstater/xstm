@@ -1,11 +1,12 @@
-use std::cell::Cell;
-use std::sync::atomic::{AtomicIsize, Ordering};
 use crate::version::Version;
+use crate::versioned_lock::VersionedLock;
 use crate::Transaction;
+use std::cell::Cell;
+use std::fmt::Debug;
 
 pub struct TVar<T> {
     value: Cell<T>,
-    local_version: AtomicIsize,
+    versioned_lock: VersionedLock,
 }
 
 // We can only Read/Write TVar in transaction
@@ -17,7 +18,7 @@ impl<T: Copy> TVar<T> {
     pub fn new(value: T) -> Self {
         TVar {
             value: Cell::new(value),
-            local_version: AtomicIsize::new(1),
+            versioned_lock: VersionedLock::new(),
         }
     }
 
@@ -63,113 +64,42 @@ impl<'trans_var, T: Copy> Transaction for WriteTransaction<'trans_var, T> {
 
 // internal methods
 impl<T: Copy> TVar<T> {
-    pub(crate) fn version(&self) -> isize {
-        self.local_version.load(Ordering::SeqCst)
+    pub(crate) fn value_ptr(&self) -> *const T {
+        self.value.as_ptr()
     }
 
-    /// Check the `version_lock` is not locked
-    /// and local version <= ref_version
-    pub(crate) fn check(&self, ref_version: Version) -> bool {
-        let local_version = self.local_version.load(Ordering::SeqCst);
-
-        let tid = std::thread::current().id();
-        println!("{tid:?}: Var Checking with local={local_version:?} ref={ref_version:?}");
-
-        local_version > 0 && local_version <= ref_version.as_isize()
+    pub(crate) fn get_lock(&self) -> &'_ VersionedLock {
+        &self.versioned_lock
     }
 
-    /// Read with version checking
-    // pub(crate) fn read_with_check(&self, read_version: Version) -> Option<T> {
-    //     // Read the data first
-    //     let data = self.value.get();
-    //     // post-validation:
-    //     if self.check(read_version) {
-    //         Some(data)
-    //     } else {
-    //         None
-    //     }
-    // }
-
-    pub(crate) fn read_with_double_check(&self, read_version: Version) -> Option<T> {
+    pub(crate) fn read_with_check(&self, read_version: Version) -> Option<T> {
         // Pre-Validation
-        let pre_version = self.local_version.load(Ordering::SeqCst);
-        
-        if pre_version < 0 {
-            return None
-        }
+        let pre_version = self.versioned_lock.version();
 
-        if pre_version > read_version.as_isize() {
-            return None
+        if !pre_version.check(read_version) {
+            return None;
         }
 
         // read the data
         let data = self.value.get();
 
         // Post-Validation
-        let post_version = self.local_version.load(Ordering::SeqCst);
-        
+        let post_version = self.versioned_lock.version();
+
+        // check the data was not changed
         if post_version != pre_version {
-            return None
+            return None;
         }
 
         Some(data)
     }
-
-    /// Try get the write lock
-    pub(crate) fn try_lock(&self) -> Option<Guard<'_, T>> {
-        let current_version = self.local_version.load(Ordering::SeqCst);
-
-        if current_version < 0 {
-            // already locked by others
-            return None;
-        }
-
-        // do a CAS action to make the version be negative
-        let result = self.local_version.compare_exchange(
-            current_version,
-            -current_version,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        );
-
-        match result {
-            // Lock successfully
-            Ok(_) => Some(Guard {
-                var: self,
-                new_local_version: Version::new(current_version).unwrap_or_else(|| {
-                    unreachable!("current_version cannot be negative, because we checked before")
-                }),
-            }),
-            Err(_) => None,
-        }
-    }
 }
 
-pub(crate) struct Guard<'var, T> {
-    var: &'var TVar<T>,
-    new_local_version: Version,
-}
-
-impl<'var, T: Copy> Guard<'var, T> {
-    // Update the local version of TVar
-    pub(crate) fn set_version(&mut self, write_version: Version) {
-        self.new_local_version = write_version;
-    }
-
-    pub(crate) fn write(&mut self, new_value: T) {
-        self.var.value.set(new_value);
-    }
-}
-
-impl<'var, T> Drop for Guard<'var, T> {
-    fn drop(&mut self) {
-        // Write the new_local_version
-        self.var
-            .local_version
-            .store(self.new_local_version.as_isize(), Ordering::SeqCst);
-
-        let tid = std::thread::current().id();
-        let version = self.new_local_version;
-        println!("{tid:?}: Var Lock realeased with new_version={version:?}");
+impl<T: Debug + Copy> Debug for TVar<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TVar")
+            .field("value", &self.value)
+            .field("versioned_lock", &self.versioned_lock)
+            .finish()
     }
 }

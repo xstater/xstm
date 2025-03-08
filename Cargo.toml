@@ -7,7 +7,7 @@ edition = "2021"
 retry_info = []
 small_alloc = ["dep:smallvec"]
 
-[profile.release-with-debug]
+[profile.bench]
 inherits = "release"
 debug = true
 
@@ -24,4 +24,8 @@ harness = false
 
 [[bench]]
 name = "fib"
+harness = false
+
+[[bench]]
+name = "vec"
 harness = false

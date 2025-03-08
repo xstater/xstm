@@ -1,3 +1,6 @@
 {
     "dependi.rust.lockFileEnabled": false,
+    "cSpell.words": [
+        "xstm"
+    ],
 }

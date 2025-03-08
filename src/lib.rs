@@ -13,6 +13,8 @@ pub use var::TVar;
 mod stm;
 pub use stm::Stm;
 
+mod versioned_lock;
+
 #[cfg(feature = "retry_info")]
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum StmError {

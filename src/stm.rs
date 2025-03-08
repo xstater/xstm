@@ -1,4 +1,4 @@
-use crate::{transaction::Transaction, version::Version, version_clock::VersionClock, Context};
+use crate::{transaction::Transaction, version_clock::VersionClock, Context};
 
 pub struct Stm {
     global_version_clock: VersionClock,
@@ -12,7 +12,7 @@ impl Stm {
     }
 
     pub fn atomically<T: Transaction>(&self, transaction: T) -> T::Output {
-        let mut context = Context::new(Version::new(1).unwrap());
+        let mut context = Context::new(1.into());
         loop {
             let read_version = self.global_version_clock.sample();
 

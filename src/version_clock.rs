@@ -1,5 +1,5 @@
-use std::sync::atomic::{AtomicIsize, Ordering};
 use crate::version::Version;
+use std::sync::atomic::{AtomicIsize, Ordering};
 
 pub struct VersionClock {
     version: AtomicIsize,
@@ -14,11 +14,12 @@ impl VersionClock {
 
     pub fn sample(&self) -> Version {
         let version = self.version.load(Ordering::SeqCst);
-        Version::new(version).unwrap()
+        version.into()
     }
 
     pub fn tick(&self) -> Version {
+        // add and fetch
         let old = self.version.fetch_add(1, Ordering::SeqCst);
-        Version::new(old.wrapping_add(1)).unwrap()
+        old.wrapping_add(1).into()
     }
 }

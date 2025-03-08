@@ -21,8 +21,7 @@ impl<'var> Context<'var> {
     }
 
     pub fn read<T: Copy>(&mut self, var: &'var TVar<T>) -> Result<T, StmError> {
-        // var.read_with_check(self.read_version)
-        var.read_with_double_check(self.read_version)
+        var.read_with_check(self.read_version)
             .ok_or_else(|| {
                 match () {
                     #[cfg(not(feature = "retry_info"))]
@@ -58,7 +57,7 @@ impl<'var> Context<'var> {
     }
 
     pub fn try_commit(&mut self) -> Result<(), StmError> {
-        // Commiting a read-only transaction is always successful
+        // Committing a read-only transaction is always successful
         Ok(())
     }
 }

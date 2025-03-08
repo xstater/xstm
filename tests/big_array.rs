@@ -60,7 +60,7 @@ async fn basic() {
             let first = _stm.atomically(update_transaction);
 
             let tid = std::thread::current().id();
-            println!("ThreadID {tid:?} commited array[0] = {first}");
+            println!("ThreadID {tid:?} committed array[0] = {first}");
         });
         handles.push(handle);
     }
