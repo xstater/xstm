@@ -1,3 +1,5 @@
+#![doc = include_str!("../ReadMe.md")]
+
 mod version;
 mod version_clock;
 
