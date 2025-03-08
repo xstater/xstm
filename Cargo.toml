@@ -1,7 +1,14 @@
 [package]
 name = "xstm"
+description = "A Rust-implemented Software Transactional Memory (STM) library using TL2 (Transactional Locking II) algorithm"
 version = "0.1.0"
 edition = "2021"
+authors = ["xstater"]
+readme = "ReadMe.md"
+repository = "https://github.com/xstater/xstm"
+license = "MIT"
+keywords = ["stm", "tl2", "concurrency"]
+categories = ["concurrency"]
 
 [features]
 retry_info = []
